@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HTA Banner Generator v4</title>
+<script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#EEF2FF;color:#1a1a2e;min-height:100vh}
+.topbar{background:linear-gradient(135deg,#0D47A1,#1976D2);color:#fff;padding:12px 24px;
+  display:flex;align-items:center;justify-content:space-between;
+  box-shadow:0 2px 12px rgba(13,71,161,.3)}
+.topbar-title{font-size:18px;font-weight:700}
+.topbar-sub{font-size:11px;color:#90CAF9}
+.layout{display:grid;grid-template-columns:450px 1fr;gap:16px;
+  padding:16px 20px;max-width:1380px;margin:0 auto}
+@media(max-width:960px){.layout{grid-template-columns:1fr}}
+.card{background:#fff;border-radius:12px;padding:14px 16px;margin-bottom:11px;
+  box-shadow:0 2px 8px rgba(13,71,161,.07);border:1px solid #E3F2FD}
+.card-title{font-size:11px;font-weight:700;color:#0D47A1;margin-bottom:9px;
+  text-transform:uppercase;letter-spacing:.7px}
+.row3{display:grid;grid-template-columns:70px 1fr 90px;gap:8px}
+.row4{display:grid;grid-template-columns:70px 1fr 86px 96px;gap:7px}
+.row2e{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.row4m{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:7px}
+.field{display:flex;flex-direction:column;gap:3px;margin-bottom:7px}
+.field:last-child{margin-bottom:0}
+label{font-size:10px;font-weight:700;color:#1565C0;text-transform:uppercase;letter-spacing:.4px}
+input[type=text],input[type=number],select{border:1.5px solid #BBDEFB;border-radius:6px;
+  padding:6px 8px;font-size:13px;font-family:inherit;background:#FAFCFF;color:#1a1a2e;
+  transition:border-color .2s;outline:none;width:100%}
+input:focus,select:focus{border-color:#1976D2;box-shadow:0 0 0 3px rgba(25,118,210,.1)}
+.hint{font-size:10px;color:#90A4AE;margin-top:2px}
+/* Style picker */
+.sg-label{font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;
+  margin-bottom:5px;display:inline-block}
+.sg-label.clr{background:#E3F2FD;color:#0D47A1}
+.sg-label.bw{background:#F5F5F5;color:#424242}
+.sg-grid{display:grid;gap:5px;margin-bottom:7px}
+.sg-grid.clr{grid-template-columns:repeat(3,1fr)}
+.sg-grid.bw{grid-template-columns:repeat(5,1fr)}
+.sopt{cursor:pointer;position:relative}
+.sopt input{position:absolute;opacity:0;width:0;height:0}
+.sbox{border:2px solid #BBDEFB;border-radius:7px;overflow:hidden;
+  transition:border-color .15s,box-shadow .15s}
+.sopt input:checked+.sbox{border-color:#1976D2;box-shadow:0 0 0 3px rgba(25,118,210,.18)}
+.sbox svg{display:block;width:100%}
+.slbl{font-size:8px;color:#546E7A;text-align:center;padding:2px;
+  background:#F8FAFF;border-top:1px solid #E3F2FD}
+/* Theme */
+.tgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.topt{cursor:pointer;position:relative}
+.topt input{position:absolute;opacity:0;width:0;height:0}
+.tsw{border:2px solid #E0E0E0;border-radius:7px;padding:5px 4px;
+  transition:border-color .15s,box-shadow .15s}
+.topt input:checked+.tsw{border-color:#1976D2;box-shadow:0 0 0 3px rgba(25,118,210,.18)}
+.tsw-row{display:flex;gap:2px;height:13px;margin-bottom:3px}
+.tsw-row span{flex:1;border-radius:2px}
+.tsw-name{font-size:8.5px;color:#546E7A;text-align:center}
+/* Sections */
+.sec-item{background:#F8FAFF;border:1px solid #E3F2FD;border-radius:8px;
+  padding:8px 10px;margin-bottom:6px}
+.sec-head{display:flex;gap:6px;align-items:center;margin-bottom:5px}
+.sec-head input{flex:1;font-weight:600;font-size:13px}
+.sec-size{width:80px;flex-shrink:0}
+.sec-del{background:#FFEBEE;border:none;border-radius:5px;color:#C62828;
+  font-weight:700;width:24px;height:24px;cursor:pointer;flex-shrink:0;font-size:11px}
+.sec-del:hover{background:#FFCDD2}
+.btn-add{background:#E3F2FD;border:1.5px dashed #1976D2;border-radius:7px;
+  color:#1976D2;font-size:12px;font-weight:600;padding:6px 12px;cursor:pointer;
+  margin-top:3px;width:100%;transition:background .15s}
+.btn-add:hover{background:#BBDEFB}
+/* Margin */
+.margin-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.margin-field{display:flex;flex-direction:column;gap:2px}
+.margin-field label{font-size:10px;font-weight:700;color:#1565C0;text-transform:uppercase}
+.margin-field input{border:1.5px solid #BBDEFB;border-radius:6px;padding:5px 8px;
+  font-size:13px;font-family:inherit;background:#FAFCFF;width:100%;outline:none}
+.margin-field input:focus{border-color:#1976D2}
+/* Gen btn */
+.btn-gen{background:linear-gradient(135deg,#0D47A1,#1976D2);color:#fff;border:none;
+  border-radius:10px;padding:12px 20px;font-size:15px;font-weight:700;
+  font-family:inherit;cursor:pointer;width:100%;margin-top:5px;
+  box-shadow:0 4px 14px rgba(13,71,161,.28)}
+.btn-gen:hover{opacity:.91}.btn-gen:disabled{opacity:.5;cursor:not-allowed}
+.status{font-size:12px;margin-top:7px;padding:7px 10px;border-radius:7px;display:none}
+.status.info{background:#E3F2FD;color:#0D47A1;display:block}
+.status.ok{background:#E8F5E9;color:#1B5E20;display:block}
+.status.err{background:#FFEBEE;color:#B71C1C;display:block}
+.prog-wrap{display:none;margin-top:6px}
+.prog-wrap.show{display:block}
+.prog-bg{background:#E3F2FD;border-radius:99px;height:6px;overflow:hidden}
+.prog-fill{background:linear-gradient(90deg,#1976D2,#42A5F5);height:100%;
+  border-radius:99px;transition:width .4s;width:0}
+.prog-txt{font-size:10px;color:#1976D2;margin-top:3px;text-align:center}
+/* Preview */
+.prev-panel{background:#fff;border-radius:12px;padding:14px 16px;
+  box-shadow:0 2px 8px rgba(13,71,161,.07);border:1px solid #E3F2FD;
+  position:sticky;top:16px;max-height:calc(100vh - 32px);overflow-y:auto}
+.prev-title{font-size:11px;font-weight:700;color:#0D47A1;margin-bottom:10px;
+  text-transform:uppercase;letter-spacing:.7px}
+.prev-page{border:1.5px solid #E3F2FD;border-radius:7px;padding:8px;
+  margin-bottom:8px;background:#FAFCFF}
+.phdr{display:flex;justify-content:space-between;font-size:9px;color:#1976D2;
+  font-weight:600;padding-bottom:4px;border-bottom:2px solid #0D47A1;margin-bottom:5px}
+.pv{margin-bottom:3px}.pv svg{width:100%;display:block;border-radius:2px}
+.mock-q{background:#fff;border-radius:4px;padding:5px 7px;margin-bottom:4px;
+  font-size:10.5px;border:1px solid #E3F2FD}
+.hbadge{display:inline-block;color:#fff;font-size:8px;font-weight:700;
+  padding:1px 4px;border-radius:2px;margin-right:3px}
+.mopts{margin-top:2px;margin-left:12px;color:#546E7A;font-size:9.5px}
+.mopts .ok{font-weight:700}
+.divl{border-top:1px solid #CFD8DC;margin:3px 0}
+.psep{text-align:center;font-size:9px;color:#999;margin:5px 0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{display:inline-block;width:11px;height:11px;border:2px solid rgba(255,255,255,.3);
+  border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;
+  margin-right:5px;vertical-align:middle}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div>
+    <div class="topbar-title">⚡ TẠO BANNER GENERTOR</div>
+    <div class="topbar-sub">Giáo viên Vật Lý trường THPT Nga Sơn</div>
+  </div>
+  <div style="text-align:right">
+    <div style="font-weight:600;font-size:13px">Thầy Hạ Tuấn Anh</div>
+    <div class="topbar-sub">0987.354.781</div>
+  </div>
+</div>
+
+<div class="layout">
+<div>
+
+<!-- 1. Chương -->
+<div class="card">
+  <div class="card-title">📘 1. Chương</div>
+  <div class="row3">
+    <div class="field"><label>Số</label>
+      <input type="text" id="v-so" value="2" oninput="qp()"></div>
+    <div class="field"><label>Tên chương</label>
+      <input type="text" id="v-ten" value="KHÍ LÍ TƯỞNG"
+             oninput="this.value=this.value.toUpperCase();qp()"></div>
+    <div class="field"><label>Cỡ chữ</label>
+      <select id="v-ten-sz" onchange="qp()">
+        <option value="36">18pt</option><option value="40">20pt</option>
+        <option value="44" selected>22pt</option><option value="48">24pt</option>
+        <option value="56">28pt</option>
+      </select></div>
+  </div>
+</div>
+
+<!-- 2. Chủ đề -->
+<div class="card">
+  <div class="card-title">📗 2. Chủ đề</div>
+  <div class="row3">
+    <div class="field"><label>Số</label>
+      <input type="text" id="v-socd" value="2.1" oninput="qp()"></div>
+    <div class="field"><label>Tên chủ đề</label>
+      <input type="text" id="v-tencd" value="ĐỊNH LUẬT BOYLE"
+             oninput="this.value=this.value.toUpperCase();qp()"></div>
+    <div class="field"><label>Cỡ chữ</label>
+      <select id="v-cd-sz" onchange="qp()">
+        <option value="20">10pt</option><option value="22">11pt</option>
+        <option value="24" selected>12pt</option><option value="26">13pt</option>
+        <option value="28">14pt</option>
+      </select></div>
+  </div>
+  <div class="field" style="margin-top:4px">
+    <label>Nhãn trang 2 <span style="color:#90A4AE;font-weight:400">(trống = tự động)</span></label>
+    <input type="text" id="v-hdr" placeholder="VD: 2.1. ĐỊNH LUẬT BOYLE" oninput="qp()">
+  </div>
+</div>
+
+<!-- 3. Kiểu banner -->
+<div class="card">
+  <div class="card-title">🎨 3. Kiểu banner</div>
+  <span class="sg-label clr">🖨 In màu — A, B, C</span>
+  <div class="sg-grid clr" id="csg"></div>
+  <span class="sg-label bw" style="margin-top:4px">🖤 In trắng đen — E, F, G, H, I</span>
+  <div class="sg-grid bw" id="bwsg"></div>
+</div>
+
+<!-- 4. Theme màu -->
+<div class="card" id="theme-card">
+  <div class="card-title">🎨 4. Theme màu</div>
+  <div class="tgrid" id="tgrid"></div>
+</div>
+
+<!-- 5. Sections -->
+<div class="card">
+  <div class="card-title">📋 5. Các mục nội dung</div>
+  <div id="sec-list"></div>
+  <button class="btn-add" onclick="addSection('')">＋  Thêm mục section</button>
+</div>
+
+<!-- 6. Lề trang -->
+<div class="card">
+  <div class="card-title">📐 6. Căn chỉnh lề trang (cm)</div>
+  <div class="margin-grid">
+    <div class="margin-field"><label>Trên</label>
+      <input type="number" id="m-top"   value="1.8" min="0.5" max="5" step="0.1" oninput="qp()"></div>
+    <div class="margin-field"><label>Dưới</label>
+      <input type="number" id="m-bot"   value="1.8" min="0.5" max="5" step="0.1" oninput="qp()"></div>
+    <div class="margin-field"><label>Trái</label>
+      <input type="number" id="m-left"  value="1.8" min="0.5" max="5" step="0.1" oninput="qp()"></div>
+    <div class="margin-field"><label>Phải</label>
+      <input type="number" id="m-right" value="1.8" min="0.5" max="5" step="0.1" oninput="qp()"></div>
+  </div>
+  <div style="margin-top:6px;font-size:10px;color:#546E7A">
+    💡 Lề nhỏ hơn = banner rộng hơn, chiếm nhiều trang hơn.<br>
+    Mặc định 1.8cm. Khuyến nghị: 1.5–2.5cm.
+  </div>
+</div>
+
+<!-- 7. Xuất -->
+<div class="card">
+  <div class="card-title">📄 7. Xuất file Word</div>
+  <div class="field">
+    <label>Tên file</label>
+    <input type="text" id="v-fname" value="TaiLieu_Chuong2_DinhLuatBoyle.docx">
+    <span class="hint">File .docx tự tải về sau khi tạo xong</span>
+  </div>
+  <button class="btn-gen" id="btn-gen" onclick="generate()">
+    📄&nbsp; TẠO FILE WORD (.docx)
+  </button>
+  <div class="prog-wrap" id="prog-wrap">
+    <div class="prog-bg"><div class="prog-fill" id="prog-bar"></div></div>
+    <div class="prog-txt" id="prog-txt">Đang xử lý...</div>
+  </div>
+  <div class="status" id="status"></div>
+</div>
+
+</div><!-- /left -->
+
+<div class="prev-panel">
+  <div class="prev-title">👁 Preview trực tiếp</div>
+  <div id="prev-root"></div>
+</div>
+</div>
+
+<script>
+'use strict';
+const SW=1700;
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+// ═══════════════════════════════════════
+// THEMES — 7 tông sáng, không dùng đen
+// ═══════════════════════════════════════
+const THEMES=[
+  {id:'blue',  name:'Xanh dương', c1:'#0A2F7A',c2:'#1976D2',acc:'#29B6F6',bg:'#E3F2FD',cdTxt:'#0D47A1'},
+  {id:'coral', name:'Cam san hô', c1:'#BF360C',c2:'#E64A19',acc:'#FFAB40',bg:'#FBE9E7',cdTxt:'#BF360C'},
+  {id:'green', name:'Xanh lá',   c1:'#1B5E20',c2:'#2E7D32',acc:'#69F0AE',bg:'#E8F5E9',cdTxt:'#1B5E20'},
+  {id:'purple',name:'Tím Lavender',c1:'#4527A0',c2:'#6A1B9A',acc:'#CE93D8',bg:'#F3E5F5',cdTxt:'#4527A0'},
+  {id:'red',   name:'Đỏ thẫm',   c1:'#B71C1C',c2:'#C62828',acc:'#FF8A65',bg:'#FFEBEE',cdTxt:'#B71C1C'},
+  {id:'cyan',  name:'Cyan Teal',  c1:'#006064',c2:'#00838F',acc:'#80DEEA',bg:'#E0F7FA',cdTxt:'#006064'},
+  {id:'teal',  name:'Teal+Cam',   c1:'#004D40',c2:'#00695C',acc:'#FF6D00',bg:'#E0F2F1',cdTxt:'#004D40'},
+];
+
+// ═══════════════════════════════════════
+// STYLES
+// ═══════════════════════════════════════
+const CLR_STYLES=[
+  {id:'A',name:'A Parallelogram'},
+  {id:'B',name:'B Chevron'},
+  {id:'C',name:'C Split diagonal'},
+];
+const BW_STYLES=[
+  {id:'E',name:'E Stripe',     hint:'~10% mực'},
+  {id:'F',name:'F Accent left',hint:'~8% mực'},
+  {id:'G',name:'G Underline',  hint:'~6% mực'},
+  {id:'H',name:'H Double line',hint:'~5% mực'},
+  {id:'I',name:'I Box right',  hint:'~8% mực'},
+];
+
+function getTheme(){return THEMES.find(t=>t.id===document.querySelector('#tgrid input:checked')?.value)||THEMES[0]}
+function getStyle(){return document.querySelector('input[name="bst"]:checked')?.value||'A'}
+function isBW(s){return['E','F','G','H','I'].includes(s||getStyle())}
+
+// ═══════════════════════════════════════
+// SVG: CHƯƠNG
+// ═══════════════════════════════════════
+function svgChuong(so,ten,sz,theme,style,h=130){
+  const t=theme,S=parseInt(sz)||44,es=esc(so),et=esc(ten);
+  const my=Math.round(h/2+S*0.22);
+
+  if(style==='A'){
+    const mx=Math.round((360+SW)/2);
+    return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${h}">
+<polygon points="0,0 390,0 350,${h} 0,${h}" fill="${t.c1}"/>
+<polygon points="340,0 408,0 365,${h} 297,${h}" fill="${t.acc}" opacity="0.85"/>
+<polygon points="360,0 ${SW},0 ${SW},${h} 318,${h}" fill="${t.c2}"/>
+<text x="170" y="${Math.round(h*.32)}" font-family="Arial" font-size="22" font-weight="bold" fill="white" text-anchor="middle" opacity="0.9">CHƯƠNG</text>
+<text x="170" y="${Math.round(h*.79)}" font-family="Arial" font-size="${Math.round(h*.46)}" font-weight="bold" fill="white" text-anchor="middle">${es}</text>
+<text x="${mx}" y="${my}" font-family="Arial" font-size="${S}" font-weight="bold" fill="white" text-anchor="middle" letter-spacing="3">${et}</text>
+</svg>`;
+  }
+  if(style==='B'){
+    const mx=Math.round((380+SW)/2);
+    return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${h}">
+<rect width="${SW}" height="${h}" fill="${t.c2}"/>
+<polygon points="0,0 280,0 330,${Math.round(h/2)} 280,${h} 0,${h}" fill="${t.c1}"/>
+<polygon points="260,0 310,0 360,${Math.round(h/2)} 310,${h} 260,${h}" fill="${t.acc}" opacity="0.65"/>
+<text x="125" y="${Math.round(h*.35)}" font-family="Arial" font-size="20" font-weight="bold" fill="white" text-anchor="middle" opacity="0.9">CHƯƠNG</text>
+<text x="125" y="${Math.round(h*.79)}" font-family="Arial" font-size="${Math.round(h*.44)}" font-weight="bold" fill="white" text-anchor="middle">${es}</text>
+<text x="${mx}" y="${my}" font-family="Arial" font-size="${S}" font-weight="bold" fill="white" text-anchor="middle" letter-spacing="3">${et}</text>
+</svg>`;
+  }
+  if(style==='C'){
+    const mx=Math.round(SW*.73);
+    return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${h}">
+<rect width="${SW}" height="${h}" fill="${t.c2}"/>
+<polygon points="0,0 ${Math.round(SW*.45)},0 ${Math.round(SW*.3)},${h} 0,${h}" fill="${t.c1}"/>
+<polygon points="${Math.round(SW*.38)},0 ${Math.round(SW*.52)},0 ${Math.round(SW*.37)},${h} ${Math.round(SW*.23)},${h}" fill="${t.acc}" opacity="0.5"/>
+<text x="${Math.round(SW*.14)}" y="${Math.round(h*.37)}" font-family="Arial" font-size="20" font-weight="bold" fill="white" text-anchor="middle" opacity="0.9">CHƯƠNG</text>
+<text x="${Math.round(SW*.14)}" y="${Math.round(h*.8)}" font-family="Arial" font-size="${Math.round(h*.45)}" font-weight="bold" fill="white" text-anchor="middle">${es}</text>
+<text x="${mx}" y="${my}" font-family="Arial" font-size="${S}" font-weight="bold" fill="white" text-anchor="middle" letter-spacing="3">${et}</text>
+</svg>`;
+  }
+  // BW styles
+  if(style==='E'){
+    // Stripe — nền TRẮNG, dải xám nhạt bên trái, 2 đường kẻ trên dưới
+    return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${h}">
+<rect width="${SW}" height="${h}" fill="white"/>
+<rect width="280" height="${h}" fill="#F0F0F0"/>
+<polygon points="268,0 300,0 280,${h} 248,${h}" fill="#CCCCCC"/>
+<line x1="0" y1="0" x2="${SW}" y2="0" stroke="#333" stroke-width="3"/>
+<line x1="0" y1="${h}" x2="${SW}" y2="${h}" stroke="#333" stroke-width="3"/>
+<text x="136" y="${Math.round(h*.35)}" font-family="Arial" font-size="20" font-weight="bold" fill="#1A1A1A" text-anchor="middle">CHƯƠNG</text>
+<text x="136" y="${Math.round(h*.8)}" font-family="Arial" font-size="${Math.round(h*.44)}" font-weight="bold" fill="#1A1A1A" text-anchor="middle">${es}</text>
+<text x="${Math.round((310+SW)/2)}" y="${my}" font-family="Arial" font-size="${S}" font-weight="bold" fill="#1A1A1A" text-anchor="middle" letter-spacing="2">${et}</text>
+</svg>`;
+  }
+  if(style==='F'){
+    return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${h}">
+<rect width="${SW}" height="${h}" fill="white"/>
+<rect width="18" height="${h}" fill="#1A1A1A"/>
+<rect x="18" width="4" height="${h}" fill="#888"/>
+<text x="36" y="${Math.round(h*.38)}" font-family="Arial" font-size="22" font-weight="bold" fill="#555">CHƯƠNG  ${es}</text>
+<text x="36" y="${Math.round(h*.78)}" font-family="Arial" font-size="${Math.min(S+4,52)}" font-weight="bold" fill="#1A1A1A" letter-spacing="2">${et}</text>
+<rect x="${SW-200}" y="${Math.round(h*.12)}" width="190" height="${Math.round(h*.38)}" rx="4" fill="#1A1A1A"/>
+<text x="${SW-105}" y="${Math.round(h*.36)}" font-family="Arial" font-size="22" font-weight="bold" fill="white" text-anchor="middle">HTA  ${es}</text>
+</svg>`;
+  }
+  if(style==='G'){
+    return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${h}">
+<rect width="${SW}" height="${h}" fill="white"/>
+<text x="30" y="${Math.round(h*.35)}" font-family="Arial" font-size="20" fill="#888" letter-spacing="6">CHƯƠNG  ${es}</text>
+<text x="30" y="${Math.round(h*.78)}" font-family="Arial" font-size="${Math.min(S+2,50)}" font-weight="bold" fill="#1A1A1A" letter-spacing="3">${et}</text>
+<rect x="0" y="${h-4}" width="${SW}" height="4" fill="#1A1A1A"/>
+<rect x="0" y="${h-7}" width="${Math.round(SW*.35)}" height="1.5" fill="#888"/>
+</svg>`;
+  }
+  if(style==='H'){
+    // Double line — 2 đường kẻ trên dưới, cực ít mực
+    return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${h}">
+<rect width="${SW}" height="${h}" fill="white"/>
+<rect x="0" y="0" width="${SW}" height="4" fill="#1A1A1A"/>
+<rect x="0" y="6" width="${SW}" height="1.5" fill="#999"/>
+<text x="30" y="${Math.round(h*.38)}" font-family="Arial" font-size="20" fill="#888" letter-spacing="5">CHƯƠNG  ${es}</text>
+<text x="30" y="${Math.round(h*.78)}" font-family="Arial" font-size="${Math.min(S+2,50)}" font-weight="bold" fill="#1A1A1A" letter-spacing="3">${et}</text>
+<rect x="0" y="${h-6}" width="${SW}" height="1.5" fill="#999"/>
+<rect x="0" y="${h-4}" width="${SW}" height="4" fill="#1A1A1A"/>
+</svg>`;
+  }
+  // I — Box số lớn bên phải
+  return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${h}">
+<rect width="${SW}" height="${h}" fill="white" stroke="#1A1A1A" stroke-width="3"/>
+<rect x="${SW-220}" y="0" width="220" height="${h}" fill="#1A1A1A"/>
+<line x1="0" y1="${Math.round(h*.45)}" x2="${SW-220}" y2="${Math.round(h*.45)}" stroke="#DDD" stroke-width="1"/>
+<text x="20" y="${Math.round(h*.35)}" font-family="Arial" font-size="20" fill="#888" letter-spacing="4">CHƯƠNG</text>
+<text x="20" y="${Math.round(h*.78)}" font-family="Arial" font-size="${Math.min(S,46)}" font-weight="bold" fill="#1A1A1A" letter-spacing="2">${et}</text>
+<text x="${SW-110}" y="${Math.round(h*.65)}" font-family="Arial" font-size="${Math.round(h*.55)}" font-weight="bold" fill="white" text-anchor="middle">${es}</text>
+</svg>`;
+}
+
+// ═══════════════════════════════════════
+// SVG: CHỦ ĐỀ
+// ═══════════════════════════════════════
+function svgChuDe(socd,tencd,sz,theme,style,h=80){
+  const t=theme,S=parseInt(sz)||24,es=esc(socd),et=esc(tencd);
+  const mid=Math.round(h/2+5);
+  if(style==='A'||style==='C'){
+    return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${h}">
+<rect width="${SW}" height="${h}" fill="${t.bg}"/>
+<polygon points="0,0 520,0 480,${h} 0,${h}" fill="${t.c1}" opacity="0.92"/>
+<polygon points="498,0 542,0 500,${h} 456,${h}" fill="${t.acc}" opacity="0.5"/>
+<text x="235" y="${mid}" font-family="Arial" font-size="26" font-weight="bold" fill="white" text-anchor="middle">${es}</text>
+<text x="760" y="${mid}" font-family="Arial" font-size="${S}" font-weight="bold" fill="${t.cdTxt}" text-anchor="middle">${et}</text>
+<line x1="502" y1="${h-5}" x2="${SW}" y2="${h-5}" stroke="${t.c2}" stroke-width="3"/>
+</svg>`;
+  }
+  if(style==='B'){
+    return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${h}">
+<rect width="${SW}" height="${h}" fill="${t.bg}"/>
+<polygon points="0,0 360,0 400,${Math.round(h/2)} 360,${h} 0,${h}" fill="${t.c1}"/>
+<polygon points="340,0 380,0 420,${Math.round(h/2)} 380,${h} 340,${h}" fill="${t.acc}" opacity="0.55"/>
+<text x="170" y="${mid}" font-family="Arial" font-size="22" font-weight="bold" fill="white" text-anchor="middle">${es}</text>
+<text x="${Math.round((440+SW)/2)}" y="${mid}" font-family="Arial" font-size="${S}" font-weight="bold" fill="${t.cdTxt}" text-anchor="middle">${et}</text>
+</svg>`;
+  }
+  if(style==='E'){
+    return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${h}">
+<rect width="${SW}" height="${h}" fill="white"/>
+<rect width="400" height="${h}" fill="#F0F0F0"/>
+<polygon points="388,0 416,0 396,${h} 368,${h}" fill="#CCCCCC"/>
+<line x1="0" y1="0" x2="${SW}" y2="0" stroke="#333" stroke-width="2"/>
+<line x1="0" y1="${h}" x2="${SW}" y2="${h}" stroke="#333" stroke-width="2"/>
+<text x="192" y="${mid}" font-family="Arial" font-size="24" font-weight="bold" fill="#1A1A1A" text-anchor="middle">${es}</text>
+<text x="${Math.round((430+SW)/2)}" y="${mid}" font-family="Arial" font-size="${S}" font-weight="bold" fill="#1A1A1A" text-anchor="middle">${et}</text>
+</svg>`;
+  }
+  if(style==='F'){
+    return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${h}">
+<rect width="${SW}" height="${h}" fill="white"/>
+<rect width="14" height="${h}" fill="#1A1A1A"/>
+<rect x="14" width="3" height="${h}" fill="#888"/>
+<text x="28" y="${Math.round(h*.42)}" font-family="Arial" font-size="20" font-weight="bold" fill="#555">${es}</text>
+<text x="28" y="${Math.round(h*.82)}" font-family="Arial" font-size="${S}" font-weight="bold" fill="#1A1A1A">${et}</text>
+<line x1="18" y1="${h-1}" x2="${SW}" y2="${h-1}" stroke="#DDD" stroke-width="1"/>
+</svg>`;
+  }
+  if(style==='G'){
+    return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${h}">
+<rect width="${SW}" height="${h}" fill="white"/>
+<text x="20" y="${Math.round(h*.38)}" font-family="Arial" font-size="17" fill="#888" letter-spacing="4">${es}</text>
+<text x="20" y="${Math.round(h*.82)}" font-family="Arial" font-size="${S}" font-weight="bold" fill="#1A1A1A" letter-spacing="1">${et}</text>
+<rect x="0" y="${h-3}" width="${SW}" height="3" fill="#1A1A1A"/>
+</svg>`;
+  }
+  if(style==='H'){
+    return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${h}">
+<rect width="${SW}" height="${h}" fill="white"/>
+<rect x="0" y="0" width="${SW}" height="3" fill="#1A1A1A"/>
+<rect x="0" y="5" width="${SW}" height="1" fill="#999"/>
+<text x="20" y="${Math.round(h*.42)}" font-family="Arial" font-size="20" fill="#888" letter-spacing="3">${es}</text>
+<text x="20" y="${Math.round(h*.82)}" font-family="Arial" font-size="${S}" font-weight="bold" fill="#1A1A1A">${et}</text>
+<rect x="0" y="${h-4}" width="${SW}" height="1" fill="#999"/>
+<rect x="0" y="${h-3}" width="${SW}" height="3" fill="#1A1A1A"/>
+</svg>`;
+  }
+  // I
+  return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${h}">
+<rect width="${SW}" height="${h}" fill="white" stroke="#1A1A1A" stroke-width="2"/>
+<rect x="${SW-220}" y="0" width="220" height="${h}" fill="#1A1A1A"/>
+<text x="20" y="${Math.round(h*.4)}" font-family="Arial" font-size="20" fill="#888">${es}</text>
+<text x="20" y="${Math.round(h*.8)}" font-family="Arial" font-size="${S}" font-weight="bold" fill="#1A1A1A">${et}</text>
+<text x="${SW-110}" y="${Math.round(h*.7)}" font-family="Arial" font-size="28" font-weight="bold" fill="white" text-anchor="middle">${es}</text>
+</svg>`;
+}
+
+// ═══════════════════════════════════════
+// SVG: SECTION BAR
+// ═══════════════════════════════════════
+function svgSection(text,sz,theme,style,h=60){
+  const t=theme,S=parseInt(sz)||21,et=esc(text),mid=Math.round(h/2+5);
+  if(style==='A'||style==='C'){
+    return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${h}">
+<polygon points="0,0 ${SW-50},0 ${SW},${h} 0,${h}" fill="${t.c1}"/>
+<polygon points="${SW-80},0 ${SW-50},0 ${SW},${h} ${SW-30},${h}" fill="${t.acc}" opacity="0.4"/>
+<polygon points="0,0 20,0 0,20" fill="${t.c1}" opacity="0.4"/>
+<text x="22" y="${mid}" font-family="Arial" font-size="${S}" font-weight="bold" fill="white">${et}</text>
+</svg>`;
+  }
+  if(style==='B'){
+    return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${h}">
+<rect width="${SW}" height="${h}" fill="${t.c2}"/>
+<polygon points="0,0 120,0 155,${Math.round(h/2)} 120,${h} 0,${h}" fill="${t.c1}"/>
+<polygon points="110,0 145,0 180,${Math.round(h/2)} 145,${h} 110,${h}" fill="${t.acc}" opacity="0.45"/>
+<text x="210" y="${mid}" font-family="Arial" font-size="${S}" font-weight="bold" fill="white">${et}</text>
+</svg>`;
+  }
+  if(style==='E'){
+    return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${h}">
+<rect width="${SW}" height="${h}" fill="white"/>
+<rect width="5" height="${h}" fill="#1A1A1A"/>
+<rect width="${Math.round(SW*.35)}" height="${h}" fill="#F5F5F5"/>
+<line x1="0" y1="0" x2="${SW}" y2="0" stroke="#333" stroke-width="1.5"/>
+<line x1="0" y1="${h}" x2="${SW}" y2="${h}" stroke="#333" stroke-width="1.5"/>
+<text x="20" y="${mid}" font-family="Arial" font-size="${S}" font-weight="bold" fill="#1A1A1A">${et}</text>
+</svg>`;
+  }
+  if(style==='F'){
+    return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${h}">
+<rect width="${SW}" height="${h}" fill="white"/>
+<rect width="8" height="${h}" fill="#555"/>
+<text x="24" y="${mid}" font-family="Arial" font-size="${S}" font-weight="bold" fill="#1A1A1A">${et}</text>
+<line x1="0" y1="${h-1}" x2="${SW}" y2="${h-1}" stroke="#DDD" stroke-width="1"/>
+</svg>`;
+  }
+  if(style==='G'){
+    return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${h}">
+<rect width="${SW}" height="${h}" fill="white"/>
+<text x="20" y="${mid}" font-family="Arial" font-size="${S}" font-weight="bold" fill="#1A1A1A">${et}</text>
+<rect x="0" y="${h-2}" width="${SW}" height="2" fill="#1A1A1A"/>
+</svg>`;
+  }
+  if(style==='H'){
+    return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${h}">
+<rect width="${SW}" height="${h}" fill="white"/>
+<rect x="0" y="0" width="${SW}" height="2" fill="#1A1A1A"/>
+<text x="20" y="${mid}" font-family="Arial" font-size="${S}" font-weight="bold" fill="#1A1A1A">${et}</text>
+<rect x="0" y="${h-2}" width="${SW}" height="2" fill="#1A1A1A"/>
+</svg>`;
+  }
+  // I
+  return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${h}">
+<rect width="${SW}" height="${h}" fill="white" stroke="#1A1A1A" stroke-width="1.5"/>
+<rect width="6" height="${h}" fill="#1A1A1A"/>
+<text x="22" y="${mid}" font-family="Arial" font-size="${S}" font-weight="bold" fill="#1A1A1A">${et}</text>
+</svg>`;
+}
+
+// ═══════════════════════════════════════
+// SVG: CONT HEADER
+// ═══════════════════════════════════════
+function svgCont(label,theme,style,h=55){
+  const t=theme,el=esc(label),mid=Math.round(h/2+5);
+  if(style==='A'||style==='C'){
+    return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${h}">
+<rect width="${SW}" height="${h}" fill="white"/>
+<rect y="${h-4}" width="${SW}" height="4" fill="${t.c2}"/>
+<polygon points="${SW-380},0 ${SW},0 ${SW},${h} ${SW-340},${h}" fill="${t.c1}"/>
+<polygon points="${SW-415},0 ${SW-380},0 ${SW-340},${h} ${SW-375},${h}" fill="${t.c2}" opacity="0.7"/>
+<text x="8" y="${mid}" font-family="Arial" font-size="22" font-weight="bold" fill="${t.c1}">${el}</text>
+<text x="${SW-170}" y="${mid}" font-family="Arial" font-size="22" font-weight="bold" fill="white" text-anchor="middle">HTA Physics</text>
+</svg>`;
+  }
+  if(style==='B'){
+    return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${h}">
+<rect width="${SW}" height="${h}" fill="${t.bg}"/>
+<polygon points="${SW-320},0 ${SW},0 ${SW},${h} ${SW-360},${h}" fill="${t.c1}"/>
+<polygon points="${SW-360},0 ${SW-320},0 ${SW-360},${h} ${SW-400},${h}" fill="${t.acc}" opacity="0.5"/>
+<text x="20" y="${mid}" font-family="Arial" font-size="22" font-weight="bold" fill="${t.c1}">${el}</text>
+<text x="${SW-160}" y="${mid}" font-family="Arial" font-size="20" font-weight="bold" fill="white" text-anchor="middle">HTA Physics</text>
+</svg>`;
+  }
+  if(style==='E'){
+    return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${h}">
+<rect width="${SW}" height="${h}" fill="white"/>
+<rect x="${SW-260}" y="0" width="260" height="${h}" fill="#F0F0F0"/>
+<line x1="0" y1="0" x2="${SW}" y2="0" stroke="#333" stroke-width="2"/>
+<line x1="0" y1="${h}" x2="${SW}" y2="${h}" stroke="#333" stroke-width="2"/>
+<text x="14" y="${mid}" font-family="Arial" font-size="22" font-weight="bold" fill="#1A1A1A">${el}</text>
+<text x="${SW-130}" y="${mid}" font-family="Arial" font-size="18" font-weight="bold" fill="#1A1A1A" text-anchor="middle">HTA Physics</text>
+</svg>`;
+  }
+  if(style==='F'){
+    return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${h}">
+<rect width="${SW}" height="${h}" fill="white"/>
+<rect width="14" height="${h}" fill="#1A1A1A"/>
+<rect x="${SW-220}" y="8" width="208" height="${h-16}" rx="3" fill="#1A1A1A"/>
+<text x="28" y="${mid}" font-family="Arial" font-size="22" font-weight="bold" fill="#1A1A1A">${el}</text>
+<text x="${SW-116}" y="${mid}" font-family="Arial" font-size="18" font-weight="bold" fill="white" text-anchor="middle">HTA Physics</text>
+</svg>`;
+  }
+  if(style==='G'){
+    return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${h}">
+<rect width="${SW}" height="${h}" fill="white"/>
+<text x="14" y="${mid}" font-family="Arial" font-size="22" font-weight="bold" fill="#1A1A1A">${el}</text>
+<text x="${SW-14}" y="${mid}" font-family="Arial" font-size="18" fill="#555" text-anchor="end">HTA Physics</text>
+<rect x="0" y="${h-2}" width="${SW}" height="2" fill="#1A1A1A"/>
+</svg>`;
+  }
+  if(style==='H'){
+    return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${h}">
+<rect width="${SW}" height="${h}" fill="white"/>
+<rect x="0" y="0" width="${SW}" height="3" fill="#1A1A1A"/>
+<rect x="0" y="5" width="${SW}" height="1" fill="#999"/>
+<text x="14" y="${mid}" font-family="Arial" font-size="22" font-weight="bold" fill="#1A1A1A">${el}</text>
+<text x="${SW-14}" y="${mid}" font-family="Arial" font-size="16" fill="#555" text-anchor="end">HTA Physics</text>
+<rect x="0" y="${h-4}" width="${SW}" height="1" fill="#999"/>
+<rect x="0" y="${h-3}" width="${SW}" height="3" fill="#1A1A1A"/>
+</svg>`;
+  }
+  // I
+  return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${h}">
+<rect width="${SW}" height="${h}" fill="white" stroke="#1A1A1A" stroke-width="2"/>
+<rect x="${SW-240}" y="0" width="240" height="${h}" fill="#1A1A1A"/>
+<text x="14" y="${mid}" font-family="Arial" font-size="22" font-weight="bold" fill="#1A1A1A">${el}</text>
+<text x="${SW-120}" y="${mid}" font-family="Arial" font-size="18" font-weight="bold" fill="white" text-anchor="middle">HTA Physics</text>
+</svg>`;
+}
+
+// ═══════════════════════════════════════
+// BUILD UI
+// ═══════════════════════════════════════
+function buildStyleGrid(){
+  const cg=document.getElementById('csg');
+  CLR_STYLES.forEach((s,i)=>{
+    const lbl=document.createElement('label');
+    lbl.className='sopt';
+    const svg=svgChuong('2','KHÍ LÍ TƯỞNG','28',THEMES[0],s.id,40);
+    lbl.innerHTML=`<input type="radio" name="bst" value="${s.id}"${i===0?' checked':''}>`+
+      `<div class="sbox"><div style="height:40px;overflow:hidden">${svg}</div>`+
+      `<div class="slbl">${s.name}</div></div>`;
+    lbl.querySelector('input').addEventListener('change',()=>{onStyleChange();qp()});
+    cg.appendChild(lbl);
+  });
+  const bg=document.getElementById('bwsg');
+  BW_STYLES.forEach(s=>{
+    const lbl=document.createElement('label');
+    lbl.className='sopt';
+    const svg=svgChuong('2','KHÍ LÍ TƯỞNG','24',THEMES[0],s.id,40);
+    lbl.innerHTML=`<input type="radio" name="bst" value="${s.id}">`+
+      `<div class="sbox"><div style="height:40px;overflow:hidden">${svg}</div>`+
+      `<div class="slbl">${s.name}<br><span style="color:#888;font-size:7px">${s.hint}</span></div></div>`;
+    lbl.querySelector('input').addEventListener('change',()=>{onStyleChange();qp()});
+    bg.appendChild(lbl);
+  });
+}
+
+function onStyleChange(){
+  document.getElementById('theme-card').style.display=isBW()?'none':'block';
+}
+
+function buildThemeGrid(){
+  const grid=document.getElementById('tgrid');
+  THEMES.forEach((t,i)=>{
+    const lbl=document.createElement('label');
+    lbl.className='topt';
+    lbl.innerHTML=`<input type="radio" name="theme" value="${t.id}"${i===0?' checked':''}>`+
+      `<div class="tsw"><div class="tsw-row">`+
+      `<span style="background:${t.c1}"></span>`+
+      `<span style="background:${t.c2}"></span>`+
+      `<span style="background:${t.acc}"></span></div>`+
+      `<div class="tsw-name">${t.name}</div></div>`;
+    lbl.querySelector('input').addEventListener('change',qp);
+    grid.appendChild(lbl);
+  });
+}
+
+// Sections — chỉ có text + size (bỏ font, color)
+const SEC_SIZES=[{v:'19',l:'9.5pt'},{v:'20',l:'10pt'},{v:'21',l:'10.5pt'},{v:'22',l:'11pt'},{v:'24',l:'12pt'}];
+
+function addSection(text=''){
+  const list=document.getElementById('sec-list');
+  const id='sec-'+Date.now();
+  const div=document.createElement('div');
+  div.className='sec-item'; div.id=id;
+  const sOpts=SEC_SIZES.map(s=>`<option value="${s.v}"${s.v==='21'?'selected':''}>${s.l}</option>`).join('');
+  div.innerHTML=`<div class="sec-head">`+
+    `<input type="text" value="${text}" placeholder="VD: 1. Phát biểu định luật Boyle" oninput="qp()" style="font-weight:600">`+
+    `<select class="sec-size" onchange="qp()">${sOpts}</select>`+
+    `<button class="sec-del" onclick="document.getElementById('${id}').remove();qp()">✕</button>`+
+    `</div>`;
+  list.appendChild(div);
+  qp();
+}
+
+function getSections(){
+  return[...document.querySelectorAll('#sec-list .sec-item')].map(div=>{
+    const inp=div.querySelector('input[type=text]');
+    const sel=div.querySelector('select');
+    return{text:inp?inp.value.trim():'',size:sel?sel.value:'21'};
+  }).filter(s=>s.text);
+}
+
+function getMargins(){
+  const v=id=>parseFloat(document.getElementById(id).value)||1.8;
+  // 1 cm = 567 twips (DXA)
+  const cm2dxa=cm=>Math.round(cm*567);
+  return{
+    top:cm2dxa(v('m-top')),bot:cm2dxa(v('m-bot')),
+    left:cm2dxa(v('m-left')),right:cm2dxa(v('m-right')),
+    // content width EMU = (21cm - left - right) * 360000
+    cwEmu:Math.round((21-(parseFloat(document.getElementById('m-left').value)||1.8)
+                        -(parseFloat(document.getElementById('m-right').value)||1.8))*360000),
+  };
+}
+
+function getConfig(){
+  return{
+    so:   (document.getElementById('v-so').value||'1').trim(),
+    ten:  (document.getElementById('v-ten').value||'VẬT LÍ NHIỆT').trim(),
+    tenSz:document.getElementById('v-ten-sz').value||'44',
+    socd: (document.getElementById('v-socd').value||'1.1').trim(),
+    tencd:(document.getElementById('v-tencd').value||'CẤU TRÚC').trim(),
+    cdSz: document.getElementById('v-cd-sz').value||'24',
+    hdr:  document.getElementById('v-hdr').value.trim(),
+    secs: getSections(),
+    theme:getTheme(),
+    style:getStyle(),
+    bw:   isBW(),
+    mar:  getMargins(),
+  };
+}
+
+// ═══════════════════════════════════════
+// PREVIEW
+// ═══════════════════════════════════════
+let _pt=null;
+function qp(){clearTimeout(_pt);_pt=setTimeout(renderPreview,280)}
+
+function renderPreview(){
+  const C=getConfig(),t=C.theme,st=C.style;
+  const hdrLbl=C.hdr||(C.socd+'. '+C.tencd);
+  const badgeBg=C.bw?'#1A1A1A':'#1976D2';
+  const okCol=C.bw?'#000':'#0D47A1';
+  const hdrBdr=C.bw?'#1A1A1A':'#0D47A1';
+
+  const mockQ=n=>`<div class="mock-q">
+<span class="hbadge" style="background:${badgeBg}">HTA</span>
+<strong>Câu ${n}.</strong>
+<span style="color:#546E7A"> (Nội dung câu hỏi...)</span>
+<div class="mopts">A. Đáp án A &nbsp; B. Đáp án B &nbsp;
+<span class="ok" style="color:${okCol}">C. Đáp án đúng</span> &nbsp; D. Đáp án D
+</div></div><div class="divl"></div>`;
+
+  const secSz=C.secs[0]?.size||'21';
+
+  document.getElementById('prev-root').innerHTML=`
+<div class="prev-page">
+<div class="phdr" style="border-color:${hdrBdr}"><span>⚡ HTA Physics</span><span>Chương ${C.so}. ${C.ten}</span></div>
+<div class="pv">${svgChuong(C.so,C.ten,C.tenSz,t,st)}</div>
+<div class="pv">${svgChuDe('CHỦ ĐỀ - '+C.socd,C.tencd,C.cdSz,t,st)}</div>
+${C.secs[0]?`<div class="pv">${svgSection(C.secs[0].text,C.secs[0].size,t,st)}</div>`:''}
+${[1,2,3].map(mockQ).join('')}
+</div>
+<div class="psep">── sang trang 2 ──</div>
+<div class="prev-page">
+<div class="pv">${svgCont(hdrLbl,t,st)}</div>
+${C.secs[1]?`<div class="pv">${svgSection(C.secs[1].text,C.secs[1].size,t,st)}</div>`:''}
+${[6,7].map(mockQ).join('')}
+</div>`;
+}
+
+// ═══════════════════════════════════════
+// SVG → PNG
+// ═══════════════════════════════════════
+function svgToPng(svgStr,srcW,srcH){
+  return new Promise((res,rej)=>{
+    const SCALE=2;
+    const cv=document.createElement('canvas');
+    cv.width=srcW*SCALE; cv.height=srcH*SCALE;
+    const img=new Image();
+    img.onload=()=>{
+      cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+      cv.toBlob(b=>b.arrayBuffer().then(ab=>res(new Uint8Array(ab))).catch(rej),'image/png');
+    };
+    img.onerror=()=>rej(new Error('SVG render failed'));
+    img.src='data:image/svg+xml;base64,'+btoa(unescape(encodeURIComponent(svgStr)));
+  });
+}
+
+// ═══════════════════════════════════════
+// DOCX XML
+// ═══════════════════════════════════════
+const NS_W='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+const NS_R='http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+const NS_WP='http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing';
+const NS_A='http://schemas.openxmlformats.org/drawingml/2006/main';
+const NS_PIC='http://schemas.openxmlformats.org/drawingml/2006/picture';
+
+function rPr({font='Arial',size='22',bold=false,color='222222',italic=false,fill=''}={}){
+  const b=bold?'<w:b/><w:bCs/>':'',i=italic?'<w:i/>':'';
+  const s=fill?`<w:shd w:val="clear" w:color="auto" w:fill="${fill}"/>`:'';
+  return`<w:rPr><w:rFonts w:ascii="${font}" w:hAnsi="${font}" w:cs="${font}"/><w:sz w:val="${size}"/><w:szCs w:val="${size}"/><w:color w:val="${color}"/>${b}${i}${s}</w:rPr>`;
+}
+function pPr({jc='left',sb=0,sa=0,ind=0,bBott=false,bTop=false,bBC='CFD8DC',bBS='4'}={}){
+  let bdr='';
+  if(bBott||bTop){bdr='<w:pBdr>';
+    if(bBott)bdr+=`<w:bottom w:val="single" w:sz="${bBS}" w:space="1" w:color="${bBC}"/>`;
+    if(bTop) bdr+=`<w:top w:val="single" w:sz="8" w:space="1" w:color="1976D2"/>`;
+    bdr+='</w:pBdr>';}
+  const i2=ind?`<w:ind w:left="${ind}"/>`:'';
+  return`<w:pPr><w:jc w:val="${jc}"/><w:spacing w:before="${sb}" w:after="${sa}"/>${i2}${bdr}</w:pPr>`;
+}
+function wr(text,kw={}){
+  const t=text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return`<w:r>${rPr(kw)}<w:t xml:space="preserve">${t}</w:t></w:r>`;
+}
+function wp2(r,kw={}){return`<w:p>${pPr(kw)}${r}</w:p>`}
+
+function imgP(rId,wE,hE,imgId,sb=0,sa=80){
+  return`<w:p><w:pPr><w:spacing w:before="${sb}" w:after="${sa}"/></w:pPr><w:r><w:drawing>
+<wp:inline distT="0" distB="0" distL="0" distR="0">
+<wp:extent cx="${wE}" cy="${hE}"/>
+<wp:effectExtent l="0" t="0" r="0" b="0"/>
+<wp:docPr id="${imgId}" name="img${imgId}"/>
+<wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr>
+<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+<pic:pic><pic:nvPicPr>
+<pic:cNvPr id="${imgId}" name="img${imgId}"/>
+<pic:cNvPicPr><a:picLocks noChangeAspect="1"/></pic:cNvPicPr>
+</pic:nvPicPr>
+<pic:blipFill><a:blip r:embed="rId${rId}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>
+<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${wE}" cy="${hE}"/></a:xfrm>
+<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>
+</pic:pic></a:graphicData></a:graphic>
+</wp:inline></w:drawing></w:r></w:p>`;
+}
+
+function htaQ(num,text,bw){
+  const bf=bw?'1A1A1A':'1976D2';
+  const badge=`<w:r>${rPr({font:'Arial',size:'17',bold:true,color:'FFFFFF',fill:bf})}<w:t xml:space="preserve"> HTA </w:t></w:r>`;
+  return wp2(badge+wr(`  Câu ${num}. `,{font:'Arial',size:'22',bold:true,color:'222222'})+
+    wr('(Thầy xóa dòng này và nhập nội dung câu hỏi tại đây)',{font:'Arial',size:'22',color:'424242'}),
+    {sb:150,sa:40});
+}
+function optP(letter,correct,bw){
+  const col=correct?(bw?'000000':'0D47A1'):'222222';
+  const txt=correct?`${letter}. Đáp án đúng — thầy nhập tại đây`:`${letter}. Đáp án ${letter}`;
+  return wp2(wr(txt,{font:'Arial',size:'22',bold:correct,color:col}),{sb:28,sa:28,ind:480});
+}
+function divP(bw){return wp2('',{sb:60,sa:60,bBott:true,bBC:bw?'888888':'CFD8DC'})}
+function pbr(){return'<w:p><w:r><w:br w:type="page"/></w:r></w:p>'}
+
+function buildHeader(so,ten,bw){
+  const CW=9640;
+  const hCol=bw?'1A1A1A':'0D47A1',sCol=bw?'555555':'1976D2';
+  const lc=`<w:tc><w:tcPr><w:tcW w:w="2800" w:type="dxa"/><w:tcBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/></w:tcBorders></w:tcPr>${wp2(wr('⚡ HTA Physics',{font:'Arial',size:'21',bold:true,color:hCol}),{sb:0,sa:0})}</w:tc>`;
+  const rc=`<w:tc><w:tcPr><w:tcW w:w="${CW-2800}" w:type="dxa"/><w:tcBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/></w:tcBorders></w:tcPr>${wp2(wr(`Chương ${so}. ${ten}`,{font:'Arial',size:'20',color:sCol}),{jc:'right',sb:0,sa:0})}</w:tc>`;
+  const tbl=`<w:tbl><w:tblPr><w:tblW w:w="${CW}" w:type="dxa"/><w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders><w:tblLook w:val="04A0"/></w:tblPr><w:tr><w:trPr><w:trHeight w:val="360"/></w:trPr>${lc}${rc}</w:tr></w:tbl>`;
+  const bc=bw?'1A1A1A':'0D47A1';
+  const bp=`<w:p><w:pPr><w:spacing w:before="0" w:after="0"/><w:pBdr><w:bottom w:val="single" w:sz="12" w:space="1" w:color="${bc}"/></w:pBdr></w:pPr></w:p>`;
+  return`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:hdr xmlns:w="${NS_W}" xmlns:r="${NS_R}">${tbl}${bp}</w:hdr>`;
+}
+
+function buildFooter(){
+  const tabs='<w:tabs><w:tab w:val="center" w:pos="4536"/><w:tab w:val="right" w:pos="9072"/></w:tabs>';
+  const runs=wr('Học Vật lí online tại ',{font:'Arial',size:'18',color:'546E7A'})+
+    wr('HTA Physics',{font:'Arial',size:'18',bold:true,color:'0D47A1'})+
+    '<w:r><w:tab/></w:r>'+
+    wr('Nắm chắc 9⁺ Lí thuyết',{font:'Arial',size:'18',bold:true,color:'1976D2'})+
+    '<w:r><w:tab/></w:r>'+
+    wr('── Thầy Hạ Tuấn Anh  0987.354.781 ──',{font:'Arial',size:'17',color:'546E7A',italic:true});
+  return`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:ftr xmlns:w="${NS_W}" xmlns:r="${NS_R}"><w:p><w:pPr><w:spacing w:before="60" w:after="40"/>${tabs}<w:pBdr><w:top w:val="single" w:sz="8" w:space="1" w:color="1976D2"/></w:pBdr></w:pPr>${runs}</w:p></w:ftr>`;
+}
+
+function buildDocRels(n){
+  let r='';
+  for(let i=1;i<=n;i++)r+=`<Relationship Id="rId${4+i}" Type="${NS_R}/image" Target="media/img${i}.png"/>\n`;
+  return`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n<Relationship Id="rId1" Type="${NS_R}/styles" Target="styles.xml"/>\n<Relationship Id="rId2" Type="${NS_R}/settings" Target="settings.xml"/>\n<Relationship Id="rId3" Type="${NS_R}/header" Target="header1.xml"/>\n<Relationship Id="rId4" Type="${NS_R}/footer" Target="footer1.xml"/>\n${r}</Relationships>`;
+}
+
+const CT=()=>`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">\n<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>\n<Default Extension="xml" ContentType="application/xml"/>\n<Default Extension="png" ContentType="image/png"/>\n<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>\n<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>\n<Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>\n<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>\n<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>\n</Types>`;
+const PKG=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${NS_R}/officeDocument" Target="word/document.xml"/></Relationships>`;
+const STYLES=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="${NS_W}"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr></w:rPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:pPr><w:spacing w:after="0"/></w:pPr></w:style></w:styles>`;
+const SETTINGS=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:settings xmlns:w="${NS_W}"><w:defaultTabStop w:val="720"/></w:settings>`;
+
+function sectPr(mar){
+  return`<w:sectPr><w:headerReference w:type="default" r:id="rId3"/><w:footerReference w:type="default" r:id="rId4"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="${mar.top}" w:right="${mar.right}" w:bottom="${mar.bot}" w:left="${mar.left}" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr>`;
+}
+
+// ═══════════════════════════════════════
+// GENERATE
+// ═══════════════════════════════════════
+function setProg(p,m){
+  document.getElementById('prog-bar').style.width=p+'%';
+  document.getElementById('prog-txt').textContent=m;
+}
+function showSt(m,t){const el=document.getElementById('status');el.className='status '+t;el.textContent=m;}
+
+async function generate(){
+  const btn=document.getElementById('btn-gen');
+  btn.disabled=true;btn.innerHTML='<span class="spin"></span> Đang tạo...';
+  document.getElementById('prog-wrap').className='prog-wrap show';
+  document.getElementById('status').className='status';
+  setProg(5,'Chuẩn bị...');
+  try{
+    const C=getConfig();
+    let fname=(document.getElementById('v-fname').value.trim())||'TaiLieu.docx';
+    if(!fname.endsWith('.docx'))fname+='.docx';
+    const {theme:t,style:st,bw,mar}=C;
+    const hdrLbl=C.hdr||(C.socd+'. '+C.tencd);
+
+    // Tính EMU dựa theo lề thực tế
+    const cwEmu=mar.cwEmu; // content width in EMU
+    const DIM={ch:[SW,130],cd:[SW,80],sec:[SW,60],ct:[SW,55]};
+    const emu=(w,h)=>{const r=cwEmu/(w*9525);return{w:Math.round(w*9525*r),h:Math.round(h*9525*r)}};
+    const iCh=emu(...DIM.ch),iCd=emu(...DIM.cd),iCt=emu(...DIM.ct),iS=emu(...DIM.sec);
+
+    setProg(10,'Vẽ banner chương...');
+    const pngCh=await svgToPng(svgChuong(C.so,C.ten,C.tenSz,t,st),...DIM.ch);
+    setProg(22,'Vẽ banner chủ đề...');
+    const pngCd=await svgToPng(svgChuDe('CHỦ ĐỀ - '+C.socd,C.tencd,C.cdSz,t,st),...DIM.cd);
+    setProg(34,'Vẽ banner trang 2...');
+    const pngCt=await svgToPng(svgCont(hdrLbl,t,st),...DIM.ct);
+    const pngSecs=[];
+    for(let i=0;i<C.secs.length;i++){
+      setProg(34+(i+1)*6,`Vẽ section ${i+1}/${C.secs.length}...`);
+      pngSecs.push(await svgToPng(svgSection(C.secs[i].text,C.secs[i].size,t,st),...DIM.sec));
+    }
+    const total=3+pngSecs.length;
+
+    setProg(62,'Tạo nội dung tài liệu...');
+    const p1=[
+      imgP(5,iCh.w,iCh.h,1,0,100),
+      imgP(6,iCd.w,iCd.h,2,0,80),
+      ...(pngSecs[0]?[imgP(7,iS.w,iS.h,3,0,60)]:[]),
+      wp2('',{sb:40,sa:0}),
+      ...[1,2,3,4,5].flatMap(n=>[
+        htaQ(n,'',bw),
+        optP('A',false,bw),optP('B',false,bw),
+        optP('C',true,bw),optP('D',false,bw),
+        divP(bw),
+      ]),
+      pbr(),
+    ];
+    const p2=[
+      imgP(8,iCt.w,iCt.h,4,0,80),
+      ...(pngSecs[1]?[imgP(9,iS.w,iS.h,5,0,60)]:[]),
+      wp2('',{sb:40,sa:0}),
+      ...[6,7,8,9,10].flatMap(n=>[
+        htaQ(n,'',bw),
+        optP('A',false,bw),optP('B',false,bw),
+        optP('C',true,bw),optP('D',false,bw),
+        divP(bw),
+      ]),
+    ];
+
+    const docXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n`+
+      `<w:document xmlns:r="${NS_R}" xmlns:wp="${NS_WP}" xmlns:w="${NS_W}" xmlns:a="${NS_A}" xmlns:pic="${NS_PIC}">\n`+
+      `<w:body>${p1.join('')}${p2.join('')}${sectPr(mar)}</w:body></w:document>`;
+
+    setProg(80,'Đóng gói .docx...');
+    if(typeof JSZip==='undefined')throw new Error('JSZip chưa tải. Kiểm tra kết nối mạng.');
+    const zip=new JSZip();
+    zip.file('[Content_Types].xml',CT());
+    zip.file('_rels/.rels',PKG);
+    zip.file('word/document.xml',docXml);
+    zip.file('word/styles.xml',STYLES);
+    zip.file('word/settings.xml',SETTINGS);
+    zip.file('word/_rels/document.xml.rels',buildDocRels(total));
+    zip.file('word/header1.xml',buildHeader(C.so,C.ten,bw));
+    zip.file('word/footer1.xml',buildFooter());
+    zip.file('word/media/img1.png',pngCh,{binary:true});
+    zip.file('word/media/img2.png',pngCd,{binary:true});
+    zip.file('word/media/img3.png',pngCt,{binary:true});
+    pngSecs.forEach((p,i)=>zip.file(`word/media/img${4+i}.png`,p,{binary:true}));
+
+    setProg(93,'Xuất file...');
+    const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.style.display='none';document.body.appendChild(a);
+    a.href=url;a.download=fname;a.click();
+    setTimeout(()=>{URL.revokeObjectURL(url);document.body.removeChild(a);},8000);
+    setProg(100,'✅ Hoàn thành!');
+    showSt(`✅ File "${fname}" đã tải về!`,'ok');
+  }catch(err){
+    console.error(err);setProg(0,'');
+    showSt('❌ Lỗi: '+err.message,'err');
+  }finally{
+    const btn=document.getElementById('btn-gen');
+    btn.disabled=false;btn.innerHTML='📄&nbsp; TẠO FILE WORD (.docx)';
+  }
+}
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+window.addEventListener('DOMContentLoaded',()=>{
+  buildStyleGrid();
+  buildThemeGrid();
+  addSection('1. Phát biểu định luật Boyle');
+  addSection('2. Đồ thị p-V');
+  renderPreview();
+});
+</script>
+</body>
+</html>
